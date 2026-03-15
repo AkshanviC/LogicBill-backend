@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Invoice - SWITCH MOBILITY</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; padding: 20px; }
+.invoice { max-width: 860px; margin: auto; border: 1px solid #999; padding: 0; }
+.header { padding: 12px 16px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: flex-start; }
+.company-name { font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+.company-sub { font-size: 11px; color: #444; margin-top: 2px; }
+.gst-top { font-size: 11px; color: #555; text-align: right; }
+.address-block { padding: 8px 16px; border-bottom: 1px solid #ccc; font-size: 11px; color: #444; }
+.invoice-meta { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #ccc; }
+.to-block { flex: 1; }
+.to-block .label { font-weight: bold; font-size: 11px; margin-bottom: 4px; }
+.to-block .party { font-weight: bold; font-size: 12px; }
+.to-block .sub { font-size: 11px; color: #444; }
+.ref-block { text-align: right; min-width: 200px; }
+.ref-block table { margin-left: auto; border-collapse: collapse; }
+.ref-block td { padding: 2px 6px; font-size: 11px; }
+.ref-block td:first-child { color: #555; }
+.ref-block td:last-child { font-weight: bold; }
+.rcm { padding: 6px 16px; font-size: 11px; font-style: italic; color: #555; border-bottom: 1px solid #ccc; }
+.items-table { width: 100%; border-collapse: collapse; }
+.items-table th, .items-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+.items-table th { background: #f0f0f0; font-weight: bold; font-size: 11px; text-align: center; }
+.items-table td.num { text-align: right; }
+.items-table td.center { text-align: center; }
+.total-row td { font-weight: bold; background: #f9f9f9; }
+.signature { display: flex; justify-content: flex-end; padding: 20px 16px 10px; font-size: 11px; text-align: center; }
+.grand-total { padding: 8px 16px; border-top: 1px solid #ccc; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; }
+.bank-details { padding: 8px 16px; border-top: 1px solid #ccc; font-size: 11px; }
+.bank-details div { margin: 1px 0; }
+.footer-note { padding: 6px 16px; font-size: 10px; color: #555; border-top: 1px solid #ccc; }
+</style>
+</head>
+<body>
+<div class="invoice">
+  <div class="header">
+    <div>
+      <div class="company-name">SHREEJI CARRIERS</div>
+      <div class="company-sub">FLEET OWNERS &amp; CONTAINER MOVERS</div>
+      <div class="company-sub">No.12/18, Thiruvalluvar Street, IInd Floor, Balakrishna Nagar,<br>Thiruvottiyur, Chennai - 600 019.</div>
+      <div class="company-sub">Email: shreejicarriers@gmail.com</div>
+    </div>
+    <div class="gst-top">GST NO. 33AACPJ1154C2ZH<br>Cell: 8939724222<br>Cell: 9841819012</div>
+  </div>
+  <div class="invoice-meta">
+    <div class="to-block">
+      <div class="label">To:</div>
+      <div class="party">M/s SWITCH MOBILITY AUTOMOTIVE LIMITED,</div>
+      <div class="sub">NO:1 ALCOB SARDAR PATEL ROAD, GUINDY-32</div>
+      <div class="sub">GST: 33ABFCS1827E1ZN</div>
+    </div>
+    <div class="ref-block">
+      <table>
+        <tr><td>SAC</td><td>996511</td></tr>
+        <tr><td>Date:</td><td>25/07/2025</td></tr>
+        <tr><td>Bill No:</td><td>1172</td></tr>
+        <tr><td>P.O No:</td><td>4070365653</td></tr>
+        <tr><td>Vendor Code:</td><td>7400668</td></tr>
+        <tr><td>GST No:</td><td>33AACPJ1154C2ZH</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="rcm">"GST is Payable under Reverse Charge Mechanism"</div>
+  <table class="items-table">
+    <thead>
+      <tr><th>S.No</th><th>Particulars</th><th>No. of Trailers</th><th>Rate (Rs.)</th><th>Amount (Rs.)</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">1</td>
+        <td>Being the Transportation Charges<br><strong>FROM:</strong> SWITCH MOBILITY, ENNORE<br><strong>TO:</strong> VIRALIMALAI TRICHY (GLOBAL TVS)<br>By 40 FT Trailers — Details Attached</td>
+        <td class="center">9 LOADS</td>
+        <td class="num">37,000</td>
+        <td class="num">3,33,000</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="4">Total: RUPEES THREE LAKH THIRTY THREE THOUSAND ONLY</td>
+        <td class="num">3,33,000</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="signature"><div>For SHREEJI CARRIERS<br><br><br>Authorized Signatory</div></div>
+</div></body>
+</html>
