@@ -1,9 +1,10 @@
+import "./utils/env.js";
 import expess from "express";
 import bodyParser from "body-parser";
-import dotenv from "dotenv";
-import sequelize from "./utils/db";
 
-dotenv.config();
+import sequelize from "./utils/db.js";
+import invoiceRoutes from "./routes/invoiceRoutes.js";
+import cors from "cors";
 
 const app = expess();
 app.use(bodyParser.json());
@@ -17,6 +18,7 @@ try {
   console.log("unable to connect. error details:", error);
 }
 
+app.use("/api/invoices", invoiceRoutes);
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server Running on the port: ${process.env.PORT || 5000}`);
 });

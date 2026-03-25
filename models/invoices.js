@@ -1,4 +1,4 @@
-import sequelize from "../utils/db";
+import sequelize from "../utils/db.js";
 import { DataTypes } from "sequelize";
 
 const Invoices = sequelize.define("invoices", {
@@ -6,10 +6,6 @@ const Invoices = sequelize.define("invoices", {
     type: DataTypes.INTEGER,
     primaryKey: true,
     autoIncrement: true,
-  },
-  templateDetails: {
-    type: DataTypes.JSON,
-    allowNull: false,
   },
   createdBy: {
     type: DataTypes.INTEGER,
@@ -24,6 +20,67 @@ const Invoices = sequelize.define("invoices", {
     allowNull: false,
     references: {
       model: "templates",
+      key: "id",
+    },
+  },
+  date: {
+    type: DataTypes.DATE,
+  },
+  transportFirmId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "transportfirm",
+      key: "id",
+    },
+  },
+  sac: {
+    type: DataTypes.STRING,
+  },
+  date: {
+    type: DataTypes.DATE,
+  },
+  billNo: {
+    type: DataTypes.STRING,
+  },
+  pono: {
+    type: DataTypes.STRING,
+  },
+  vendorCode: {
+    type: DataTypes.STRING,
+  },
+  gstno: {
+    type: DataTypes.STRING,
+  },
+  pan: {
+    type: DataTypes.STRING,
+  },
+  trailerId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "trailers",
+      key: "id",
+    },
+  },
+  driverId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "drivers",
+      key: "id",
+    },
+  },
+  diesel: {
+    type: DataTypes.STRING,
+  },
+  driverBeta: {
+    type: DataTypes.STRING,
+  },
+  advance: {
+    type: DataTypes.STRING,
+  },
+  clientId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "clients",
       key: "id",
     },
   },
