@@ -1,15 +1,24 @@
 import sequelize from "../utils/db.js";
 import { DataTypes } from "sequelize";
 
-const Trailers = sequelize.define("drivers", {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
+const Trailers = sequelize.define(
+  "trailers",
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    regNo: {
+      type: DataTypes.TEXT,
+      field: "regNo",
+    },
   },
-  regNo: {
-    type: DataTypes.TEXT,
-  },
-});
+  {
+    tableName: "trailers",
+    timestamps: true, // This enables createdAt and updatedAt automatically
+    underscored: true,
+  }
+);
 
 export default Trailers;

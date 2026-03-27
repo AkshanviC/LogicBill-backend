@@ -4,6 +4,10 @@ import bodyParser from "body-parser";
 
 import sequelize from "./utils/db.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
+import trailerRoutes from "./routes/trailerRoutes.js";
+import driverRoutes from "./routes/driverRoutes.js";
+import clientRoutes from "./routes/clientRoutes.js";
+
 import cors from "cors";
 
 const app = expess();
@@ -19,6 +23,10 @@ try {
 }
 
 app.use("/api/invoices", invoiceRoutes);
+app.use("/api/trailers", trailerRoutes);
+app.use("/api/drivers", driverRoutes);
+app.use("/api/clients", clientRoutes);
+
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server Running on the port: ${process.env.PORT || 5000}`);
 });

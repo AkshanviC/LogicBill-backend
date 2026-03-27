@@ -70,8 +70,9 @@ export const createInvoice = async (req, res) => {
   try {
     // console.log(req.data, req.body);
     const t = await sequelize.transaction();
-    const { invoices, invoiceHeaders, invoiceRows } = req.body;
-
+    const { invoices, invoiceRows } = req.body;
+    const [day, month, year] = invoices.date.split("-");
+    const formattedDate = `${year}-${month}-${day}`;
     // Required field validation
     // if (!templateDetails) {
     //   return res.status(400).json({ message: "templateDetails is required" });
@@ -87,7 +88,10 @@ export const createInvoice = async (req, res) => {
         .json({ message: "templateId must be a valid template ID" });
     }
 
-    const invoice = await createNewInvoice(invoices, { transaction: t });
+    const invoice = await createNewInvoice(
+      { ...invoices, date: formattedDate },
+      { transaction: t }
+    );
     // console.log(invoice.id, "invoiceid");
     if (invoice.id) {
       // console.log(invoiceHeaders);
@@ -99,12 +103,15 @@ export const createInvoice = async (req, res) => {
       //   invoiceId: invoice.id,
       //   date: formattedDate,
       // };
-      let rowInput = invoiceRows.map((data) => {
+
+      let rowInput = invoiceRows.map(({ id, ...data }) => {
         return { ...data, invoiceId: invoice.id };
       });
+      console.log("invoice.id:", invoice.id, typeof invoice.id);
+      console.log("rowInput:", JSON.stringify(rowInput));
       // const date = new Date(invoiceHeaders.date);
       // console.log(date, "date");
-      console.log(headerInput, rowInput);
+      console.log(rowInput);
       // const invoiceHeader = await createNewInvoiceHeader(headerInput, {
       //   transaction: t,
       // });
