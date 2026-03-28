@@ -15,8 +15,8 @@ import sequelize from "../utils/db.js";
  */
 export const getInvoices = async (req, res) => {
   try {
-    const { page = 1, limit = 10 } = req.query;
-
+    const { page = 1, limit = 10, driverId, trailerId, clientId } = req.query;
+    console.log(driverId, trailerId, clientId);
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
@@ -29,7 +29,11 @@ export const getInvoices = async (req, res) => {
         .json({ message: "Limit must be between 1 and 100" });
     }
 
-    const invoices = await fetchAllInvoices({ page: pageNum, limit: limitNum });
+    const invoices = await fetchAllInvoices({
+      page: pageNum,
+      limit: limitNum,
+      invoiceFilters: { driverId, trailerId, clientId },
+    });
     return res.status(200).json(invoices);
   } catch (error) {
     console.error("getInvoices error:", error);
@@ -90,7 +94,7 @@ export const createInvoice = async (req, res) => {
 
     const invoice = await createNewInvoice(
       { ...invoices, date: formattedDate },
-      { transaction: t }
+      { transaction: t },
     );
     // console.log(invoice.id, "invoiceid");
     if (invoice.id) {

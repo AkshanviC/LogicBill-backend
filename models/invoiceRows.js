@@ -7,10 +7,6 @@ const InvoiceRows = sequelize.define("invoicerows", {
     primaryKey: true,
     autoIncrement: true,
   },
-  templateDetails: {
-    type: DataTypes.JSON,
-    allowNull: false,
-  },
   fromAddress: {
     type: DataTypes.STRING,
   },
@@ -35,7 +31,7 @@ const InvoiceRows = sequelize.define("invoicerows", {
   others: {
     type: DataTypes.STRING,
   },
-  weigth: {
+  weight: {
     type: DataTypes.INTEGER,
   },
   trailers: {

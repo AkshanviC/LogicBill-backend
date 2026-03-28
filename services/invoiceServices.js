@@ -3,25 +3,54 @@ import {
   InvoiceHeaders,
   InvoiceRows,
 } from "../associations/associations.js";
+import Clients from "../models/clients.js";
+import Drivers from "../models/drivers.js";
+import Trailers from "../models/trailers.js";
 
 /**
  * Fetch all invoices with pagination
  * @param {Object} options - { page, limit }
  * @returns {Object} - { data, total, page, limit, totalPages }
  */
-export const fetchAllInvoices = async ({ page = 1, limit = 10 }) => {
+export const fetchAllInvoices = async ({
+  page = 1,
+  limit = 10,
+  invoiceFilters = {},
+}) => {
   const offset = (page - 1) * limit;
+  const whereClause = {};
 
+  // Apply filters if provided
+  if (invoiceFilters.driverId) {
+    whereClause.driverId = invoiceFilters.driverId;
+  }
+  if (invoiceFilters.trailerId) {
+    whereClause.trailerId = invoiceFilters.trailerId;
+  }
+  if (invoiceFilters.clientId) {
+    whereClause.clientId = invoiceFilters.clientId;
+  }
   const { count, rows } = await Invoices.findAndCountAll({
     limit,
     offset,
     order: [["createdAt", "DESC"]],
+    where: whereClause,
     include: [
       {
         model: InvoiceRows,
+        as: "Rows",
       },
       {
-        model: InvoiceHeaders,
+        model: Drivers,
+        as: "driver",
+      },
+      {
+        model: Trailers,
+        as: "trailer",
+      },
+      {
+        model: Clients,
+        as: "client",
       },
     ],
   });
@@ -88,7 +117,7 @@ export const updateInvoiceById = async (id, data) => {
 
   // Strip out undefined fields so we only update what was provided
   const updatePayload = Object.fromEntries(
-    Object.entries(data).filter(([_, value]) => value !== undefined)
+    Object.entries(data).filter(([_, value]) => value !== undefined),
   );
 
   await invoice.update(updatePayload);

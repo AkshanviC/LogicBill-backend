@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-router.get("/", getInvoices);
+router.get("/getInvoice", getInvoices);
 router.get("/:id", getInvoiceById);
 router.post("/", createInvoice);
 router.put("/:id", updateInvoice);
