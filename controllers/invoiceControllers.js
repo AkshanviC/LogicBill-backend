@@ -75,8 +75,13 @@ export const createInvoice = async (req, res) => {
     // console.log(req.data, req.body);
     const t = await sequelize.transaction();
     const { invoices, invoiceRows } = req.body;
-    const [day, month, year] = invoices.date.split("-");
-    const formattedDate = `${year}-${month}-${day}`;
+    let formattedDate = null;
+    if (!invoices.date) {
+      formattedDate = new Date().toISOString().split("T")[0]; // Default to current date in YYYY-MM-DD format
+    } else {
+      const [day, month, year] = invoices.date.split("-");
+      formattedDate = `${year}-${month}-${day}`;
+    }
     // Required field validation
     // if (!templateDetails) {
     //   return res.status(400).json({ message: "templateDetails is required" });
