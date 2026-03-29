@@ -15,8 +15,16 @@ import sequelize from "../utils/db.js";
  */
 export const getInvoices = async (req, res) => {
   try {
-    const { page = 1, limit = 10, driverId, trailerId, clientId } = req.query;
-    console.log(driverId, trailerId, clientId);
+    const {
+      page = 1,
+      limit = 10,
+      driverId,
+      trailerId,
+      clientId,
+      from,
+      to,
+    } = req.query;
+    // console.log(driverId, trailerId, clientId);
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
 
@@ -32,7 +40,13 @@ export const getInvoices = async (req, res) => {
     const invoices = await fetchAllInvoices({
       page: pageNum,
       limit: limitNum,
-      invoiceFilters: { driverId, trailerId, clientId },
+      invoiceFilters: {
+        driverId,
+        trailerId,
+        clientId,
+        from: from ? new Date(from) : undefined,
+        to: to ? new Date(to) : undefined,
+      },
     });
     return res.status(200).json(invoices);
   } catch (error) {
