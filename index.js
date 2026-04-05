@@ -15,7 +15,7 @@ app.use(bodyParser.json());
 app.use(cors({ origin: process.env.FRONTEND }));
 
 try {
-  sequelize.authenticate();
+  await sequelize.authenticate();
   console.log("connection with database has been established successfully");
   sequelize.sync().then(() => console.log("synced with tables"));
 } catch (error) {
