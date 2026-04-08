@@ -291,9 +291,9 @@ function buildInvoiceHtml(invoice, rows, meta = {}) {
     meta.firmAddress ||
     "No.12/18, Thiruvalluvar Street, IInd Floor, Balakrishna Nagar,<br>Thiruvottiyur, Chennai - 600 019.";
   const firmEmail = meta.firmEmail || "shreejicarriers@gmail.com";
-  const firmGst = meta.firmGst || invoice.gstno || "";
-  const firmPhone1 = meta.firmPhone1 || "";
-  const firmPhone2 = meta.firmPhone2 || "";
+  const firmGst = "33AACPJ1154C2ZH";
+  const firmPhone1 = "8939724222";
+  const firmPhone2 = "9841819012";
 
   // ── Client block ─────────────────────────────────────────────────────────
   const clientName = meta.clientName || "";
@@ -541,15 +541,25 @@ body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background:
  */
 export async function generateInvoicePDF(id, outputPath, meta = {}) {
   const invoiceData = await Invoices.findByPk(id, {
-    include: [{ model: InvoiceRows, as: "Rows" }],
+    include: [
+      { model: InvoiceRows, as: "Rows" },
+      { model: Clients, as: "client" },
+      { model: Drivers, as: "driver" },
+      { model: Trailers, as: "trailer" },
+    ],
   });
-  const html = buildInvoiceHtml(invoiceData, invoiceData.dataValues.Rows, meta);
+
+  const html = buildInvoiceHtml(
+    invoiceData?.toJSON(),
+    invoiceData?.toJSON()?.Rows,
+    meta,
+  );
 
   const browser = await puppeteer.launch({
     headless: "new",
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
-
+  console.log("Launched headless browser for PDF generation");
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -559,6 +569,7 @@ export async function generateInvoicePDF(id, outputPath, meta = {}) {
       printBackground: true,
       margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
     });
+    console.log("PDF generated and saved to:", outputPath);
     return outputPath;
   } finally {
     await browser.close();
