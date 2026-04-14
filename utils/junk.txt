@@ -1,0 +1,16 @@
+  invoiceServices.js
+  this is the header for the template (buildhtml)
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="company-name">${firmName}</div>
+      <div class="company-sub">${firmSub}</div>
+      <div class="company-sub">${firmAddr}</div>
+      ${firmEmail ? `<div class="company-sub">Email: ${firmEmail}</div>` : ""}
+    </div>
+    <div class="gst-top">
+      ${firmGst ? `GST NO. ${firmGst}<br>` : ""}
+      ${firmPhone1 ? `Cell: ${firmPhone1}<br>` : ""}
+      ${firmPhone2 ? `Cell: ${firmPhone2}` : ""}
+    </div>
+  </div>
