@@ -296,9 +296,9 @@ function buildInvoiceHtml(invoice, rows, meta = {}) {
   const firmPhone2 = "9841819012";
 
   // ── Client block ─────────────────────────────────────────────────────────
-  const clientName = meta.clientName || "";
-  const clientAddr = meta.clientAddress || "";
-  const clientGst = meta.clientGst || "";
+  const clientName = invoice.client.displayName || "";
+  const clientAddr = invoice.client.address || "";
+  const clientGst = invoice.client.gstNo || "";
   const isBillOfSupply = meta.isBillOfSupply || false;
 
   // ── Invoice meta rows (right side) ───────────────────────────────────────
@@ -479,20 +479,7 @@ body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background:
 <body>
 <div class="invoice">
 
-  <!-- HEADER -->
-  <div class="header">
-    <div>
-      <div class="company-name">${firmName}</div>
-      <div class="company-sub">${firmSub}</div>
-      <div class="company-sub">${firmAddr}</div>
-      ${firmEmail ? `<div class="company-sub">Email: ${firmEmail}</div>` : ""}
-    </div>
-    <div class="gst-top">
-      ${firmGst ? `GST NO. ${firmGst}<br>` : ""}
-      ${firmPhone1 ? `Cell: ${firmPhone1}<br>` : ""}
-      ${firmPhone2 ? `Cell: ${firmPhone2}` : ""}
-    </div>
-  </div>
+
 
   <!-- TO + REF BLOCK -->
   <div class="invoice-meta">
@@ -563,14 +550,26 @@ export async function generateInvoicePDF(id, outputPath, meta = {}) {
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({
-      path: outputPath,
-      format: "A4",
-      printBackground: true,
-      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
-    });
-    console.log("PDF generated and saved to:", outputPath);
-    return outputPath;
+    if (outputPath) {
+      // Save to disk and return the path
+      await page.pdf({
+        path: outputPath,
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
+      console.log("PDF saved to:", outputPath);
+      return outputPath;
+    } else {
+      // Return as Buffer (no disk usage)
+      const buffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+      });
+      console.log("PDF generated as buffer for invoice:", id);
+      return buffer;
+    }
   } finally {
     await browser.close();
   }

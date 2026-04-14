@@ -10,6 +10,7 @@ import {
 } from "../services/invoiceServices.js";
 import sequelize from "../utils/db.js";
 import path from "path";
+import fs from "fs";
 const __dirname = import.meta.dirname;
 // const __filename = import.meta.filename;
 
@@ -266,17 +267,32 @@ export const generateInvoice = async (req, res) => {
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ message: "Invalid invoice ID" });
     }
-    const invoice = await generateInvoicePDF(
-      parseInt(id),
-      path.join(__dirname, "Invoice.pdf"),
-    );
+    // const pdfDir = path.join(__dirname, "pdf");
+    // if (!fs.existsSync(pdfDir)) {
+    //   fs.mkdirSync(pdfDir, { recursive: true });
+    // }
 
-    if (!invoice) {
+    // const filePath = path.join(pdfDir, "Invoice.pdf");
+    // const invoice = await generateInvoicePDF(
+    //   parseInt(id),
+    //   path.join(__dirname, "Invoice.pdf"),
+    // );
+
+    // if (!invoice) {
+    //   return res.status(404).json({ message: "Invoice not found" });
+    // }
+    // // const filePath = path.join(__dirname, "Invoice.pdf");
+    // res.contentType("application/pdf");
+    // res.sendFile(filePath);
+    // No outputPath passed — returns a Buffer
+    const pdfBuffer = await generateInvoicePDF(parseInt(id));
+
+    if (!pdfBuffer) {
       return res.status(404).json({ message: "Invoice not found" });
     }
-    const filePath = path.join(__dirname, "Invoice.pdf");
+
     res.contentType("application/pdf");
-    res.sendFile(filePath);
+    res.send(pdfBuffer);
   } catch (error) {
     console.error("generateInvoice error:", error);
     return res.status(500).json({ message: "Internal server error" });
