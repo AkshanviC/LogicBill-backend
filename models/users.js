@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { DataTypes } from "sequelize";
-import sequelize from "../utils/db";
+import sequelize from "../utils/db.js";
 
 const Users = sequelize.define("users", {
   id: {
@@ -17,7 +17,7 @@ const Users = sequelize.define("users", {
     allowNull: false,
   },
   mobile: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING,
     allowNull: false,
   },
   password: {
