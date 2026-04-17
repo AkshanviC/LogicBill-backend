@@ -9,7 +9,13 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
  * Sign Up — creates a new user after checking for duplicate email/mobile.
  * Password hashing is handled by the Sequelize model setter.
  */
-export const signUpService = async ({ name, email, mobile, password }) => {
+export const signUpService = async ({
+  name,
+  email,
+  mobile,
+  password,
+  role,
+}) => {
   const existingEmail = await Users.findOne({ where: { email } });
   if (existingEmail) throw new Error("EMAIL_EXISTS");
 
