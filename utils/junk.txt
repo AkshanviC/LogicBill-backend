@@ -14,3 +14,429 @@
       ${firmPhone2 ? `Cell: ${firmPhone2}` : ""}
     </div>
   </div>
+
+  // ---------------------------------------------------------------------------
+// Helper utilities  (keep existing ones; only new ones added here)
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the HTML for a SINGLE invoice page (unchanged logic, extracted so
+ * it can be reused inside the multi-page bulk document).
+ */
+function buildInvoiceHtml(invoice, rows, meta = {}) {
+  // ── Firm (carrier) block ─────────────────────────────────────────────────
+  const firmName    = meta.firmName    || "SHREEJI CARRIERS";
+  const firmSub     = meta.firmSub     || "FLEET OWNERS &amp; CONTAINER MOVERS";
+  const firmAddr    = meta.firmAddress ||
+    "No.12/18, Thiruvalluvar Street, IInd Floor, Balakrishna Nagar,<br>Thiruvottiyur, Chennai - 600 019.";
+  const firmEmail   = meta.firmEmail   || "shreejicarriers@gmail.com";
+  const firmGst     = "33AACPJ1154C2ZH";
+  const firmPhone1  = "8939724222";
+  const firmPhone2  = "9841819012";
+
+  // ── Client block ─────────────────────────────────────────────────────────
+  const clientName       = invoice.client.displayName || "";
+  const clientAddr       = invoice.client.address     || "";
+  const clientGst        = invoice.client.gstNo       || "";
+  const isBillOfSupply   = meta.isBillOfSupply        || false;
+
+  // ── Invoice meta rows (right side) ───────────────────────────────────────
+  const metaRows = [
+    metaRow("SAC",          invoice.sac),
+    metaRow("Date:",        formatDate(invoice.date)),
+    metaRow("Bill No:",     invoice.billNo),
+    metaRow("P.O No:",      invoice.pono),
+    metaRow("Vendor Code:", invoice.vendorCode),
+    metaRow("PAN:",         invoice.pan),
+    metaRow("GST No:",      invoice.gstno),
+  ].filter(Boolean).join("\n");
+
+  // ── Determine which optional columns exist across ALL rows ───────────────
+  const showWeight   = rows.some((r) => hasValue(r.weight));
+  const showTrailers = rows.some((r) => hasValue(r.trailers));
+  const showRate     = rows.some((r) => hasValue(r.rate));
+
+  // ── Table header ─────────────────────────────────────────────────────────
+  let thead = `<tr>
+    <th>S.No</th>
+    <th>Particulars</th>`;
+  if (showWeight)   thead += `<th>Weight</th>`;
+  if (showTrailers) thead += `<th>No. of Trailers</th>`;
+  if (showRate)     thead += `<th>Rate (Rs.)</th>`;
+  thead += `<th>Amount (Rs.)</th></tr>`;
+
+  // ── Table body ────────────────────────────────────────────────────────────
+  let grandTotal = 0;
+  let tbodyRows  = "";
+  let sno        = 1;
+
+  rows.forEach((row) => {
+    let particulars = "Being the Transportation Charges";
+
+    if (hasValue(row.fromAddress) || hasValue(row.toAddress)) {
+      particulars += "<br>";
+      if (hasValue(row.fromAddress)) particulars += `<strong>FROM:</strong> ${row.fromAddress}`;
+      if (hasValue(row.fromAddress) && hasValue(row.toAddress)) particulars += "&nbsp;&nbsp;";
+      if (hasValue(row.toAddress))   particulars += `<strong>TO:</strong> ${row.toAddress}`;
+    }
+    if (hasValue(row.trailerNo))  particulars += `<br>Trailer No: ${row.trailerNo}`;
+    if (hasValue(row.lrNo))       particulars += `<br>LR.NO: ${row.lrNo}`;
+    if (hasValue(row.invoiceNo))  particulars += `<br>INV.NO: ${row.invoiceNo}`;
+    if (hasValue(row.docNo))      particulars += `<br>DOC NO: ${row.docNo}`;
+    if (hasValue(row.shipmentNo)) particulars += `<br>Shipment No: ${row.shipmentNo}`;
+    if (hasValue(row.others))     particulars += `<br>${row.others}`;
+
+    const rowAmount = Number(row.amount) || 0;
+    grandTotal += rowAmount;
+
+    tbodyRows += `<tr>
+      <td class="center">${sno++}</td>
+      <td>${particulars}</td>
+      ${showWeight   ? `<td class="center">${hasValue(row.weight)   ? row.weight              : ""}</td>` : ""}
+      ${showTrailers ? `<td class="center">${hasValue(row.trailers) ? row.trailers + " LOADS"  : ""}</td>` : ""}
+      ${showRate     ? `<td class="num">${hasValue(row.rate)        ? formatIndianCurrency(row.rate) : "LUMPSUM"}</td>` : ""}
+      <td class="num">${formatIndianCurrency(rowAmount)}</td>
+    </tr>`;
+
+    // Add-on rows
+    if (hasValue(row.prorate)) {
+      grandTotal += Number(row.prorate);
+      tbodyRows += `<tr>
+        <td></td><td>ADD: PRORATE</td>
+        ${showWeight   ? `<td class="center">2</td>` : ""}
+        ${showTrailers ? `<td></td>` : ""}
+        ${showRate     ? `<td></td>` : ""}
+        <td class="num">${formatIndianCurrency(row.prorate)}</td>
+      </tr>`;
+    }
+
+    if (hasValue(row.loadingCharge)) {
+      grandTotal += Number(row.loadingCharge);
+      tbodyRows += `<tr>
+        <td></td><td>ADD: LOADING CHARGE</td>
+        ${showWeight   ? `<td></td>` : ""}
+        ${showTrailers ? `<td></td>` : ""}
+        ${showRate     ? `<td></td>` : ""}
+        <td class="num">${formatIndianCurrency(row.loadingCharge)}</td>
+      </tr>`;
+    }
+
+    const cgst = Number(row.cgst) || 0;
+    const sgst = Number(row.sgst) || 0;
+    if (cgst || sgst) {
+      const taxTotal = cgst + sgst;
+      grandTotal += taxTotal;
+      if (cgst) {
+        const cgstPct = rowAmount > 0 ? Math.round((cgst / rowAmount) * 100) : 9;
+        tbodyRows += `<tr>
+          <td></td><td>OUTPUT CGST ${cgstPct}% — Rs. ${formatIndianCurrency(cgst)}</td>
+          ${showWeight ? `<td></td>` : ""}${showTrailers ? `<td></td>` : ""}${showRate ? `<td></td>` : ""}
+          <td class="num">${formatIndianCurrency(taxTotal)}</td>
+        </tr>`;
+      }
+      if (sgst) {
+        const sgstPct = rowAmount > 0 ? Math.round((sgst / rowAmount) * 100) : 9;
+        tbodyRows += `<tr>
+          <td></td><td>OUTPUT SGST ${sgstPct}% — Rs. ${formatIndianCurrency(sgst)}</td>
+          ${showWeight ? `<td></td>` : ""}${showTrailers ? `<td></td>` : ""}${showRate ? `<td></td>` : ""}
+          <td></td>
+        </tr>`;
+      }
+    }
+  });
+
+  const totalCols = 1 + (showWeight ? 1 : 0) + (showTrailers ? 1 : 0) + (showRate ? 1 : 0);
+  tbodyRows += `<tr class="total-row">
+    <td colspan="${totalCols + 1}">Total: RUPEES ${numberToWords(grandTotal)}</td>
+    <td class="num">${formatIndianCurrency(grandTotal)}</td>
+  </tr>`;
+
+  const rcmBanner = isBillOfSupply
+    ? ""
+    : `<div class="rcm">"GST is Payable under Reverse Charge Mechanism"</div>`;
+
+  return `
+  <div class="invoice">
+    <div class="invoice-meta">
+      <div class="to-block">
+        ${isBillOfSupply ? "" : '<div class="label">To:</div>'}
+        ${clientName ? `<div class="party">${clientName}</div>` : ""}
+        ${clientAddr ? `<div class="sub">${clientAddr}</div>` : ""}
+        ${clientGst  ? `<div class="sub">GST: ${clientGst}</div>` : ""}
+        ${isBillOfSupply ? '<div class="sub" style="margin-top:6px;font-style:italic;font-weight:bold">BILL OF SUPPLY</div>' : ""}
+      </div>
+      <div class="ref-block">
+        <table>${metaRows}</table>
+      </div>
+    </div>
+    ${rcmBanner}
+    <table class="items-table">
+      <thead>${thead}</thead>
+      <tbody>${tbodyRows}</tbody>
+    </table>
+    <div class="signature">
+      <div>For ${firmName}<br><br><br>Authorized Signatory</div>
+    </div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// NEW: Summary sheet HTML builder
+// ---------------------------------------------------------------------------
+/**
+ * Builds an HTML summary table listing all invoices in a bulk PDF.
+ * Each row = one invoice with its key fields and amount.
+ *
+ * @param {object[]} invoiceDataList - Array of plain invoice objects (with Rows & client populated)
+ * @param {string}   firmName
+ */
+function buildSummarySheetHtml(invoiceDataList, firmName = "SHREEJI CARRIERS") {
+  let grandTotal = 0;
+
+  const rows = invoiceDataList.map((invoice, idx) => {
+    const rowTotal = (invoice.Rows || []).reduce((sum, r) => {
+      let t = Number(r.amount) || 0;
+      if (hasValue(r.prorate))       t += Number(r.prorate);
+      if (hasValue(r.loadingCharge)) t += Number(r.loadingCharge);
+      t += (Number(r.cgst) || 0) + (Number(r.sgst) || 0);
+      return sum + t;
+    }, 0);
+
+    grandTotal += rowTotal;
+
+    // Collect route info from first row
+    const firstRow   = (invoice.Rows || [])[0] || {};
+    const fromAddr   = firstRow.fromAddress || "—";
+    const toAddr     = firstRow.toAddress   || "—";
+    const trailerNos = (invoice.Rows || [])
+      .map((r) => r.trailerNo)
+      .filter(Boolean)
+      .join(", ") || "—";
+    const lrNos = (invoice.Rows || [])
+      .map((r) => r.lrNo)
+      .filter(Boolean)
+      .join(", ") || "—";
+
+    return `<tr>
+      <td class="center">${idx + 1}</td>
+      <td class="center">${invoice.billNo || "—"}</td>
+      <td class="center">${formatDate(invoice.date)}</td>
+      <td>${invoice.client?.displayName || "—"}</td>
+      <td>${fromAddr}</td>
+      <td>${toAddr}</td>
+      <td class="center">${trailerNos}</td>
+      <td class="center">${lrNos}</td>
+      <td class="num">${formatIndianCurrency(rowTotal)}</td>
+    </tr>`;
+  }).join("\n");
+
+  return `
+  <div class="invoice summary-sheet">
+    <div class="summary-header">
+      <div class="company-name">${firmName}</div>
+      <div class="summary-title">Consolidated Invoice Summary</div>
+      <div class="summary-subtitle">${invoiceDataList.length} invoice(s) &nbsp;|&nbsp; Generated: ${formatDate(new Date())}</div>
+    </div>
+    <table class="items-table summary-table">
+      <thead>
+        <tr>
+          <th>S.No</th>
+          <th>Bill No</th>
+          <th>Date</th>
+          <th>Client</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Trailer No(s)</th>
+          <th>LR No(s)</th>
+          <th>Amount (Rs.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+        <tr class="total-row">
+          <td colspan="8" style="text-align:right;font-weight:bold">
+            Grand Total: RUPEES ${numberToWords(grandTotal)}
+          </td>
+          <td class="num">${formatIndianCurrency(grandTotal)}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// NEW: Shared CSS + full document wrapper
+// ---------------------------------------------------------------------------
+function wrapInDocument(bodyContent, title = "Invoice") {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>${title}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; padding: 20px; }
+
+/* ── Single invoice wrapper ── */
+.invoice {
+  max-width: 860px; margin: auto;
+  border: 1px solid #999; padding: 0;
+}
+
+/* ── Page break between invoices in bulk PDF ── */
+.invoice + .invoice { margin-top: 0; page-break-before: always; }
+
+/* ── Shared layout ── */
+.header { padding: 12px 16px; border-bottom: 1px solid #ccc; display: flex; justify-content: space-between; align-items: flex-start; }
+.company-name { font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+.company-sub { font-size: 11px; color: #444; margin-top: 2px; }
+.gst-top { font-size: 11px; color: #555; text-align: right; }
+.invoice-meta { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #ccc; }
+.to-block { flex: 1; }
+.to-block .label { font-weight: bold; font-size: 11px; margin-bottom: 4px; }
+.to-block .party { font-weight: bold; font-size: 12px; }
+.to-block .sub { font-size: 11px; color: #444; }
+.ref-block { text-align: right; min-width: 200px; }
+.ref-block table { margin-left: auto; border-collapse: collapse; }
+.ref-block td { padding: 2px 6px; font-size: 11px; }
+.ref-block td:first-child { color: #555; }
+.ref-block td:last-child { font-weight: bold; }
+.rcm { padding: 6px 16px; font-size: 11px; font-style: italic; color: #555; border-bottom: 1px solid #ccc; }
+.items-table { width: 100%; border-collapse: collapse; }
+.items-table th, .items-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }
+.items-table th { background: #f0f0f0; font-weight: bold; font-size: 11px; text-align: center; }
+.items-table td.num { text-align: right; }
+.items-table td.center { text-align: center; }
+.total-row td { font-weight: bold; background: #f9f9f9; }
+.signature { display: flex; justify-content: flex-end; padding: 20px 16px 10px; font-size: 11px; text-align: center; }
+
+/* ── Summary sheet specific ── */
+.summary-sheet { border: 1px solid #999; }
+.summary-header { padding: 16px; border-bottom: 1px solid #ccc; text-align: center; }
+.summary-title { font-size: 16px; font-weight: bold; margin-top: 6px; letter-spacing: 0.5px; }
+.summary-subtitle { font-size: 11px; color: #555; margin-top: 4px; }
+.summary-table th { white-space: nowrap; }
+</style>
+</head>
+<body>
+${bodyContent}
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// PDF generation — UPDATED
+// ---------------------------------------------------------------------------
+
+/**
+ * Generates a PDF for one OR many invoices.
+ *
+ * Single invoice  → identical to the old behaviour: one page with the
+ *                   invoice template.
+ *
+ * Multiple invoices → Page 1 : Consolidated invoice (all rows merged under
+ *                               shared client/meta from the first invoice)
+ *                    Page 2…N: Individual invoice pages (one per invoice)
+ *                    Last page: Summary sheet (table listing all invoices)
+ *
+ * @param {number|number[]} idOrIds  - A single invoice ID or an array of IDs
+ * @param {string}          [outputPath] - Where to write the PDF (omit → Buffer)
+ * @param {object}          [meta]       - Optional enrichment (firmName, etc.)
+ * @returns {Promise<string|Buffer>}
+ */
+export async function generateInvoicePDF(idOrIds, outputPath, meta = {}) {
+  const ids = Array.isArray(idOrIds) ? idOrIds : [idOrIds];
+  const isBulk = ids.length > 1;
+
+  // ── 1. Fetch all invoice records ─────────────────────────────────────────
+  const invoiceDataList = await Promise.all(
+    ids.map((id) =>
+      Invoices.findByPk(id, {
+        include: [
+          { model: InvoiceRows, as: "Rows" },
+          { model: Clients,     as: "client" },
+          { model: Drivers,     as: "driver" },
+          { model: Trailers,    as: "trailer" },
+        ],
+      })
+    )
+  );
+
+  const plainList = invoiceDataList.map((inv) => inv?.toJSON());
+
+  // ── 2. Build HTML ─────────────────────────────────────────────────────────
+  let bodyHtml = "";
+
+  if (!isBulk) {
+    // ── Single invoice: original behaviour ───────────────────────────────
+    bodyHtml = buildInvoiceHtml(plainList[0], plainList[0].Rows, meta);
+  } else {
+    // ── Bulk: consolidated invoice first ─────────────────────────────────
+    //
+    // We use the first invoice's header/meta (client, billNo, date, etc.)
+    // and merge ALL rows from every invoice into one items table.
+    // This gives the client a single invoice document covering all jobs.
+    const firstInvoice  = plainList[0];
+    const mergedRows    = plainList.flatMap((inv) => inv.Rows || []);
+
+    const consolidatedInvoice = {
+      ...firstInvoice,
+      // Overrides that make sense for a consolidated doc:
+      billNo:    meta.consolidatedBillNo || firstInvoice.billNo,
+      date:      meta.consolidatedDate   || firstInvoice.date,
+    };
+
+    bodyHtml += buildInvoiceHtml(consolidatedInvoice, mergedRows, {
+      ...meta,
+      consolidatedNote: `Consolidated — ${ids.length} trips`,
+    });
+
+    // ── Individual invoice pages (one per invoice, after the consolidated) ─
+    for (const inv of plainList) {
+      bodyHtml += buildInvoiceHtml(inv, inv.Rows || [], meta);
+    }
+
+    // ── Summary sheet (last page) ─────────────────────────────────────────
+    const firmName = meta.firmName || "SHREEJI CARRIERS";
+    bodyHtml += buildSummarySheetHtml(plainList, firmName);
+  }
+
+  const title = isBulk
+    ? `Invoices ${ids.join(", ")}`
+    : `Invoice ${plainList[0]?.billNo || ids[0]}`;
+
+  const html = wrapInDocument(bodyHtml, title);
+
+  // ── 3. Render PDF via Puppeteer ───────────────────────────────────────────
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  console.log(
+    `Launched headless browser for PDF generation — ${isBulk ? `bulk (${ids.length} invoices)` : "single invoice"}`
+  );
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfOptions = {
+      format: "A4",
+      printBackground: true,
+      margin: { top: "10mm", bottom: "10mm", left: "10mm", right: "10mm" },
+    };
+
+    if (outputPath) {
+      await page.pdf({ ...pdfOptions, path: outputPath });
+      console.log("PDF saved to:", outputPath);
+      return outputPath;
+    } else {
+      const buffer = await page.pdf(pdfOptions);
+      console.log(`PDF buffer generated for invoice(s): ${ids.join(", ")}`);
+      return buffer;
+    }
+  } finally {
+    await browser.close();
+  }
+}

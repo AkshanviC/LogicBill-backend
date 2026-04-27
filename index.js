@@ -8,6 +8,7 @@ import trailerRoutes from "./routes/trailerRoutes.js";
 import driverRoutes from "./routes/driverRoutes.js";
 import clientRoutes from "./routes/clientRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import transportFirmRoutes from "./routes/transportFirmRoutes.js";
 
 import cors from "cors";
 
@@ -28,7 +29,7 @@ app.use("/api/trailers", trailerRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/auth", authRoutes);
-
+app.use("/api/transport-firms", transportFirmRoutes);
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server Running on the port: ${process.env.PORT || 5000}`);
 });
