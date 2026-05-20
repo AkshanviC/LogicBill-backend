@@ -8,6 +8,7 @@ import {
   createNewInvoiceRows,
   generateInvoicePDF,
 } from "../services/invoiceServices.js";
+import { generateInvoice } from "../services/invoiceGeneration.js";
 import sequelize from "../utils/db.js";
 import path from "path";
 import fs from "fs";
@@ -260,7 +261,7 @@ export const deleteInvoice = async (req, res) => {
   }
 };
 
-export const generateInvoice = async (req, res) => {
+export const generateInvoiceController = async (req, res) => {
   try {
     console.log("generateInvoice called with id:", req.params.id);
     const { id } = req.params;
@@ -295,6 +296,32 @@ export const generateInvoice = async (req, res) => {
     res.send(pdfBuffer);
   } catch (error) {
     console.error("generateInvoice error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const generateInvoiceList = async (req, res) => {
+  try {
+    const { invoiceIds } = req.body;
+    // if (
+    //   !Array.isArray(invoiceIds) ||
+    //   invoiceIds.some((id) => isNaN(parseInt(id)))
+    // ) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "invoiceIds must be an array of valid invoice IDs" });
+    // }
+    const pdfBuffer = await generateInvoice(invoiceIds);
+
+    if (!pdfBuffer) {
+      return res
+        .status(404)
+        .json({ message: "No invoices found for the provided IDs" });
+    }
+    res.contentType("application/pdf");
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("generateInvoiceList error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

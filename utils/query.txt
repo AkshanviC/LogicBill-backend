@@ -1,0 +1,3 @@
+alter table logicbill.invoices
+add column ewayBillNo text,
+add column isActive boolean NOT NULL default true;

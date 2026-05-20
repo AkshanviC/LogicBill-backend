@@ -1,16 +1,16 @@
 import "./utils/env.js";
 import expess from "express";
 import bodyParser from "body-parser";
-
+import cors from "cors";
 import sequelize from "./utils/db.js";
+
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import trailerRoutes from "./routes/trailerRoutes.js";
 import driverRoutes from "./routes/driverRoutes.js";
 import clientRoutes from "./routes/clientRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import transportFirmRoutes from "./routes/transportFirmRoutes.js";
-
-import cors from "cors";
+import addressRoutes from "./routes/addressRoutes.js";
 
 const app = expess();
 app.use(bodyParser.json());
@@ -30,6 +30,7 @@ app.use("/api/drivers", driverRoutes);
 app.use("/api/clients", clientRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/transport-firms", transportFirmRoutes);
+app.use("/api/addresses", addressRoutes);
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server Running on the port: ${process.env.PORT || 5000}`);
 });

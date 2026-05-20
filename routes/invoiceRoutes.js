@@ -5,7 +5,8 @@ import {
   createInvoice,
   updateInvoice,
   deleteInvoice,
-  generateInvoice,
+  generateInvoiceController as generateInvoice,
+  generateInvoiceList,
 } from "../controllers/invoiceControllers.js";
 
 const router = Router();
@@ -16,5 +17,6 @@ router.post("/", createInvoice);
 router.put("/:id", updateInvoice);
 router.delete("/:id", deleteInvoice);
 router.get("/generate/:id", generateInvoice);
+router.post("/generate", generateInvoiceList);
 
 export default router;

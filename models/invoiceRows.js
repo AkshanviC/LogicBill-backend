@@ -55,6 +55,9 @@ const InvoiceRows = sequelize.define("invoicerows", {
   sgst: {
     type: DataTypes.INTEGER,
   },
+  fromToId: {
+    type: DataTypes.INTEGER,
+  },
 });
 
 export default InvoiceRows;

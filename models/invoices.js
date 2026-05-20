@@ -84,6 +84,9 @@ const Invoices = sequelize.define("invoices", {
       key: "id",
     },
   },
+  ewayBillNo: {
+    type: DataTypes.STRING,
+  },
 });
 
 export default Invoices;
