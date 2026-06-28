@@ -5,6 +5,8 @@ import TransportFirm from "../models/transportFirm.js";
 import Trailers from "../models/trailers.js";
 import Drivers from "../models/drivers.js";
 import Clients from "../models/clients.js";
+import Address from "../models/address.js";
+import Bills from "../models/bills.js";
 
 Invoices.hasMany(InvoiceRows, { foreignKey: "invoiceId", as: "Rows" });
 
@@ -20,9 +22,16 @@ Invoices.belongsTo(Trailers, { foreignKey: "trailerId", as: "trailer" });
 
 Invoices.belongsTo(Clients, { foreignKey: "clientId", as: "client" });
 
+Invoices.belongsTo(Address, { foreignKey: "addressId", as: "address" });
+
 TransportFirm.hasMany(Invoices, {
   foreignKey: "transportFirmId",
   as: "Invoices",
 });
 
-export { Invoices, TransportFirm, InvoiceHeaders, InvoiceRows };
+Address.belongsTo(Clients, { foreignKey: "clientId", as: "client" });
+
+Bills.hasMany(Invoices, { foreignKey: "billId" });
+Invoices.belongsTo(Bills, { foreignKey: "billId", as: "bills" });
+
+export { Invoices, TransportFirm, InvoiceHeaders, InvoiceRows, Address, Bills };

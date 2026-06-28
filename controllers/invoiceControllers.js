@@ -10,9 +10,10 @@ import {
 } from "../services/invoiceServices.js";
 import { generateInvoice } from "../services/invoiceGeneration.js";
 import sequelize from "../utils/db.js";
-import path from "path";
-import fs from "fs";
-const __dirname = import.meta.dirname;
+import { createBill } from "../services/billsServices.js";
+// import path from "path";
+// import fs from "fs";
+// const __dirname = import.meta.dirname;
 // const __filename = import.meta.filename;
 
 /**
@@ -29,6 +30,7 @@ export const getInvoices = async (req, res) => {
       clientId,
       from,
       to,
+      addressId,
     } = req.query;
     // console.log(driverId, trailerId, clientId);
     const pageNum = parseInt(page);
@@ -52,6 +54,7 @@ export const getInvoices = async (req, res) => {
         clientId,
         from: from ? new Date(from) : undefined,
         to: to ? new Date(to) : undefined,
+        addressId: addressId ? parseInt(addressId) : undefined,
       },
     });
     return res.status(200).json(invoices);
@@ -268,6 +271,9 @@ export const generateInvoiceController = async (req, res) => {
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ message: "Invalid invoice ID" });
     }
+    console.log(req.body, "req.body");
+    const response = await createBill([parseInt(id)], req.body.createdBy);
+    console.log("Bill created with ID:", response.id);
     // const pdfDir = path.join(__dirname, "pdf");
     // if (!fs.existsSync(pdfDir)) {
     //   fs.mkdirSync(pdfDir, { recursive: true });
@@ -302,7 +308,10 @@ export const generateInvoiceController = async (req, res) => {
 
 export const generateInvoiceList = async (req, res) => {
   try {
+    console.log("generateInvoiceList called with invoiceIds:", req.body);
     const { invoiceIds } = req.body;
+    const response = await createBill(invoiceIds, req.body.createdBy);
+    console.log("Bill created with ID:", response.id);
     // if (
     //   !Array.isArray(invoiceIds) ||
     //   invoiceIds.some((id) => isNaN(parseInt(id)))

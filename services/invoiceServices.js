@@ -3,6 +3,7 @@ import {
   Invoices,
   InvoiceHeaders,
   InvoiceRows,
+  Address,
 } from "../associations/associations.js";
 import Clients from "../models/clients.js";
 import Drivers from "../models/drivers.js";
@@ -46,6 +47,9 @@ export const fetchAllInvoices = async ({
       [Op.lte]: invoiceFilters.to,
     };
   }
+  if (invoiceFilters.addressId) {
+    whereClause.addressId = invoiceFilters.addressId;
+  }
 
   const { count, rows } = await Invoices.findAndCountAll({
     limit,
@@ -68,6 +72,10 @@ export const fetchAllInvoices = async ({
       {
         model: Clients,
         as: "client",
+      },
+      {
+        model: Address,
+        as: "address",
       },
     ],
   });
@@ -284,6 +292,7 @@ function numberToWords(n) {
  *                             clientGst, isBillOfSupply }
  */
 function buildInvoiceHtml(invoice, rows, meta = {}) {
+  console.log("rows:", rows);
   // ── Firm (carrier) block ─────────────────────────────────────────────────
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   const firmSub = meta.firmSub || "FLEET OWNERS &amp; CONTAINER MOVERS";

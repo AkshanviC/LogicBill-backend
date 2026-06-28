@@ -16,7 +16,7 @@ router.get("/:id", getInvoiceById);
 router.post("/", createInvoice);
 router.put("/:id", updateInvoice);
 router.delete("/:id", deleteInvoice);
-router.get("/generate/:id", generateInvoice);
+router.post("/generate/:id", generateInvoice);
 router.post("/generate", generateInvoiceList);
 
 export default router;

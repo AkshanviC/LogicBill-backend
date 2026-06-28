@@ -26,7 +26,9 @@ const Address = sequelize.define(
   {
     tableName: "address",
     timestamps: true, // This enables createdAt and updatedAt automatically
-    underscored: true,
+    // underscored: true,
+    createdAt: "created_at", // maps to your actual DB column
+    updatedAt: "updated_at",
   },
 );
 

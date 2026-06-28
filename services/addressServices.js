@@ -1,4 +1,4 @@
-import Address from "../models/address.js";
+import { Address } from "../associations/associations.js";
 
 export const createAddress = async (addressData) => {
   try {

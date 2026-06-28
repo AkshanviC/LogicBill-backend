@@ -1,3 +1,11 @@
+import InvoiceRows from "../models/invoiceRows.js";
+import Invoices from "../models/invoices.js";
+import Clients from "../models/clients.js";
+import Drivers from "../models/drivers.js";
+import Trailers from "../models/trailers.js";
+import puppeteer from "puppeteer";
+import Address from "../models/address.js";
+import Bills from "../models/bills.js";
 // ---------------------------------------------------------------------------
 // Helper utilities  (keep your existing hasValue / metaRow / formatDate /
 // formatIndianCurrency / numberToWords unchanged above this file)
@@ -6,7 +14,109 @@
 // ---------------------------------------------------------------------------
 // buildInvoiceHtml  — UNCHANGED (used for single invoice & detail pages)
 // ---------------------------------------------------------------------------
+const ones = [
+  "",
+  "ONE",
+  "TWO",
+  "THREE",
+  "FOUR",
+  "FIVE",
+  "SIX",
+  "SEVEN",
+  "EIGHT",
+  "NINE",
+  "TEN",
+  "ELEVEN",
+  "TWELVE",
+  "THIRTEEN",
+  "FOURTEEN",
+  "FIFTEEN",
+  "SIXTEEN",
+  "SEVENTEEN",
+  "EIGHTEEN",
+  "NINETEEN",
+];
+
+const tens = [
+  "",
+  "",
+  "TWENTY",
+  "THIRTY",
+  "FORTY",
+  "FIFTY",
+  "SIXTY",
+  "SEVENTY",
+  "EIGHTY",
+  "NINETY",
+];
+
+function hasValue(v) {
+  if (v === null || v === undefined) return false;
+  if (typeof v === "string" && v.trim() === "") return false;
+  if (typeof v === "number" && v === 0) return false;
+  return true;
+}
+
+/** Format a number as Indian currency string: 1234567 → "12,34,567" */
+function formatIndianCurrency(num) {
+  if (!num && num !== 0) return "";
+  const n = Number(num);
+  if (isNaN(n)) return String(num);
+  return n.toLocaleString("en-IN");
+}
+
+/** Format a Date / ISO string → "DD/MM/YYYY" */
+function formatDate(d) {
+  if (!d) return "";
+  const dt = d instanceof Date ? d : new Date(d);
+  if (isNaN(dt)) return String(d);
+  const dd = String(dt.getDate()).padStart(2, "0");
+  const mm = String(dt.getMonth() + 1).padStart(2, "0");
+  const yyyy = dt.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function numToWordsLessThan1000(n) {
+  if (n === 0) return "";
+  if (n < 20) return ones[n];
+  if (n < 100)
+    return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+  return (
+    ones[Math.floor(n / 100)] +
+    " HUNDRED" +
+    (n % 100 ? " " + numToWordsLessThan1000(n % 100) : "")
+  );
+}
+
+function numberToWords(n) {
+  if (!n || n === 0) return "ZERO";
+  const num = Math.round(Number(n));
+  if (isNaN(num)) return "";
+  let result = "";
+  if (num >= 10000000)
+    result += numToWordsLessThan1000(Math.floor(num / 10000000)) + " CRORE ";
+  if (num % 10000000 >= 100000)
+    result +=
+      numToWordsLessThan1000(Math.floor((num % 10000000) / 100000)) + " LAKH ";
+  if (num % 100000 >= 1000)
+    result +=
+      numToWordsLessThan1000(Math.floor((num % 100000) / 1000)) + " THOUSAND ";
+  if (num % 1000 >= 100)
+    result +=
+      numToWordsLessThan1000(Math.floor((num % 1000) / 100)) + " HUNDRED ";
+  if (num % 100) result += numToWordsLessThan1000(num % 100);
+  return result.trim() + " ONLY";
+}
+
 function buildInvoiceHtml(invoice, rows, meta = {}) {
+  console.log(
+    "buildInvoiceHtml called with invoice:",
+    invoice,
+    "rows:",
+    rows,
+    "meta:",
+    meta,
+  );
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   const isBillOfSupply = meta.isBillOfSupply || false;
 
@@ -167,6 +277,10 @@ function metaRow(label, value) {
 //   4. Amount = No. of Trailers × Rate.
 // ---------------------------------------------------------------------------
 function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
+  console.log(
+    "buildConsolidatedInvoiceHtml called with invoiceList:",
+    invoiceList,
+  );
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   const isBillOfSupply = meta.isBillOfSupply || false;
 
@@ -190,8 +304,8 @@ function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
   // Shared from/to taken from first row of first invoice.
   // All invoices in a bulk call must share the same route.
   const firstRow = (firstInvoice.Rows || [])[0] || {};
-  const fromAddr = firstRow.fromAddress || "";
-  const toAddr = firstRow.toAddress || "";
+  const fromAddr = firstInvoice?.address?.from || "";
+  const toAddr = firstInvoice?.address?.to || "";
 
   // No. of Trailers = number of invoices being consolidated  (correction #2)
   const trailerCount = invoiceList.length;
@@ -267,7 +381,8 @@ function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
 function buildSummarySheetHtml(invoiceList, meta = {}) {
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   let grandTotal = 0;
-
+  const bills = invoiceList[0]?.bills?.id || "—";
+  console.log("buildSummarySheetHtml called with invoiceList:", invoiceList);
   const rows = invoiceList
     .map((invoice, idx) => {
       const invoiceAmount = (invoice.Rows || []).reduce((sum, r) => {
@@ -278,15 +393,16 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
         return sum + t;
       }, 0);
       grandTotal += invoiceAmount;
-
       const firstRow = (invoice.Rows || [])[0] || {};
-      const fromAddr = firstRow.fromAddress || "—";
-      const toAddr = firstRow.toAddress || "—";
-      const trailerNos =
-        (invoice.Rows || [])
-          .map((r) => r.trailerNo)
-          .filter(Boolean)
-          .join(", ") || "—";
+      const fromAddr = invoice?.address?.from || "—";
+      const toAddr = invoice?.address?.to || "—";
+      const trailerNos = invoice?.trailer?.regNo || "—";
+
+      // const trailerNos =
+      //   (invoice.Rows || [])
+      //     .map((r) => r.trailerNo)
+      //     .filter(Boolean)
+      //     .join(", ") || "—";
       const lrNos =
         (invoice.Rows || [])
           .map((r) => r.lrNo)
@@ -300,13 +416,14 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
 
       return `<tr>
       <td class="center">${idx + 1}</td>
-      <td class="center">${invoice.billNo || "—"}</td>
-      <td class="center">${formatDate(invoice.date)}</td>
-      <td>${fromAddr}</td>
-      <td>${toAddr}</td>
       <td class="center">${trailerNos}</td>
       <td class="center">${lrNos}</td>
       <td class="center">${docNos}</td>
+      <td class="center">${invoice.ewayBillNo || "—"}</td>
+      <td class="center">${formatDate(invoice.date)}</td>
+      <td>${fromAddr}</td>
+      <td>${toAddr}</td>
+      
       <td class="num">${formatIndianCurrency(invoiceAmount)}</td>
     </tr>`;
     })
@@ -317,19 +434,19 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
     <div class="summary-header">
       <div class="company-name">${firmName}</div>
       <div class="summary-title">Consolidated Invoice Summary</div>
-      <div class="summary-subtitle">${invoiceList.length} trip(s) &nbsp;|&nbsp; Generated: ${formatDate(new Date())}</div>
+      <div class="summary-subtitle">${invoiceList.length} trip(s) &nbsp;|&nbsp; Generated: ${formatDate(new Date())} &nbsp;|&nbsp; bill No: ${bills}</div>
     </div>
     <table class="items-table summary-table">
       <thead>
         <tr>
           <th>S.No</th>
-          <th>Bill No</th>
-          <th>Date</th>
-          <th>From</th>
-          <th>To</th>
           <th>Trailer No</th>
           <th>LR No</th>
           <th>Doc No</th>
+          <th>E-Way Bill No</th>
+          <th>Date</th> 
+          <th>From</th>    
+          <th>To</th>     
           <th>Amount (Rs.)</th>
         </tr>
       </thead>
@@ -423,6 +540,8 @@ export async function generateInvoice(idOrIds, outputPath, meta = {}) {
           { model: Clients, as: "client" },
           { model: Drivers, as: "driver" },
           { model: Trailers, as: "trailer" },
+          { model: Address, as: "address" },
+          { model: Bills, as: "bills" },
         ],
       }),
     ),

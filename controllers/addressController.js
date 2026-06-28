@@ -16,6 +16,7 @@ export const getAllAddressesController = async (req, res) => {
     const addresses = await getAllAddresses({ clientId });
     res.status(200).json(addresses);
   } catch (error) {
+    console.log("Error fetching addresses:", error);
     res.status(error.status || 500).json({ error: error.message });
   }
 };

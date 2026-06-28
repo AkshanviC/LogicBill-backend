@@ -87,6 +87,24 @@ const Invoices = sequelize.define("invoices", {
   ewayBillNo: {
     type: DataTypes.STRING,
   },
+  addressId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "address",
+      key: "id",
+    },
+  },
+  others: {
+    type: DataTypes.STRING,
+  },
+  billId: {
+    type: DataTypes.INTEGER,
+    references: {
+      model: "Bills",
+      key: "id",
+    },
+    allowNull: true, // Nullable because an invoice exists before it is billed
+  },
 });
 
 export default Invoices;
