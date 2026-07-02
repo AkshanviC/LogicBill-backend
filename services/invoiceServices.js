@@ -4,6 +4,7 @@ import {
   InvoiceHeaders,
   InvoiceRows,
   Address,
+  Bills,
 } from "../associations/associations.js";
 import Clients from "../models/clients.js";
 import Drivers from "../models/drivers.js";
@@ -292,7 +293,7 @@ function numberToWords(n) {
  *                             clientGst, isBillOfSupply }
  */
 function buildInvoiceHtml(invoice, rows, meta = {}) {
-  console.log("rows:", rows);
+  // console.log("rows:", rows);
   // ── Firm (carrier) block ─────────────────────────────────────────────────
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   const firmSub = meta.firmSub || "FLEET OWNERS &amp; CONTAINER MOVERS";
@@ -309,12 +310,12 @@ function buildInvoiceHtml(invoice, rows, meta = {}) {
   const clientAddr = invoice.client.address || "";
   const clientGst = invoice.client.gstNo || "";
   const isBillOfSupply = meta.isBillOfSupply || false;
-
+  console.log(invoice, "invoice");
   // ── Invoice meta rows (right side) ───────────────────────────────────────
   const metaRows = [
     metaRow("SAC", invoice.sac),
     metaRow("Date:", formatDate(invoice.date)),
-    metaRow("Bill No:", invoice.billNo),
+    metaRow("Bill No:", invoice?.bills?.id || invoice.billNo),
     metaRow("P.O No:", invoice.pono),
     metaRow("Vendor Code:", invoice.vendorCode),
     metaRow("PAN:", invoice.pan),
@@ -542,6 +543,8 @@ export async function generateInvoicePDF(id, outputPath, meta = {}) {
       { model: Clients, as: "client" },
       { model: Drivers, as: "driver" },
       { model: Trailers, as: "trailer" },
+      { model: Address, as: "address" },
+      { model: Bills, as: "bills" },
     ],
   });
 

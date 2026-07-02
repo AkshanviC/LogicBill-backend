@@ -109,25 +109,25 @@ function numberToWords(n) {
 }
 
 function buildInvoiceHtml(invoice, rows, meta = {}) {
-  console.log(
-    "buildInvoiceHtml called with invoice:",
-    invoice,
-    "rows:",
-    rows,
-    "meta:",
-    meta,
-  );
+  // console.log(
+  //   "buildInvoiceHtml called with invoice:",
+  //   invoice,
+  //   "rows:",
+  //   rows,
+  //   "meta:",
+  //   meta,
+  // );
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   const isBillOfSupply = meta.isBillOfSupply || false;
 
   const clientName = invoice.client.displayName || "";
   const clientAddr = invoice.client.address || "";
   const clientGst = invoice.client.gstNo || "";
-
+  console.log(invoice, invoice.bills);
   const metaRows = [
     metaRow("SAC", invoice.sac),
     metaRow("Date:", formatDate(invoice.date)),
-    metaRow("Bill No:", invoice.billNo),
+    metaRow("Bill No:", invoice.bills?.id || invoice.billNo),
     metaRow("P.O No:", invoice.pono),
     metaRow("Vendor Code:", invoice.vendorCode),
     metaRow("PAN:", invoice.pan),
@@ -277,10 +277,10 @@ function metaRow(label, value) {
 //   4. Amount = No. of Trailers × Rate.
 // ---------------------------------------------------------------------------
 function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
-  console.log(
-    "buildConsolidatedInvoiceHtml called with invoiceList:",
-    invoiceList,
-  );
+  // console.log(
+  //   "buildConsolidatedInvoiceHtml called with invoiceList:",
+  //   invoiceList,
+  // );
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   const isBillOfSupply = meta.isBillOfSupply || false;
 
@@ -306,7 +306,7 @@ function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
   const firstRow = (firstInvoice.Rows || [])[0] || {};
   const fromAddr = firstInvoice?.address?.from || "";
   const toAddr = firstInvoice?.address?.to || "";
-
+  const others = firstRow?.others || "-";
   // No. of Trailers = number of invoices being consolidated  (correction #2)
   const trailerCount = invoiceList.length;
 
@@ -321,6 +321,10 @@ function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
     if (fromAddr) particulars += `<strong>FROM:</strong> ${fromAddr}`;
     if (fromAddr && toAddr) particulars += "&nbsp;&nbsp;";
     if (toAddr) particulars += `<strong>TO:</strong> ${toAddr}`;
+    if (others)
+      particulars += `<br><span style="margin-top: 10px">${others}</span>`;
+    particulars +=
+      "<br>Details of all trips are provided in the summary sheet on the next page.";
   }
 
   const rcmBanner = isBillOfSupply
@@ -355,8 +359,9 @@ function buildConsolidatedInvoiceHtml(invoiceList, meta = {}) {
       <tbody>
         <tr>
           <td class="center">1</td>
-          <td>${particulars}</td>
+          <td>${particulars}</td>          
           <td class="center">${trailerCount}</td>
+
           <td class="num">${formatIndianCurrency(rate)}</td>
           <td class="num">${formatIndianCurrency(amount)}</td>
         </tr>
@@ -382,7 +387,7 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
   const firmName = meta.firmName || "SHREEJI CARRIERS";
   let grandTotal = 0;
   const bills = invoiceList[0]?.bills?.id || "—";
-  console.log("buildSummarySheetHtml called with invoiceList:", invoiceList);
+  // console.log("buildSummarySheetHtml called with invoiceList:", invoiceList);
   const rows = invoiceList
     .map((invoice, idx) => {
       const invoiceAmount = (invoice.Rows || []).reduce((sum, r) => {
@@ -397,7 +402,6 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
       const fromAddr = invoice?.address?.from || "—";
       const toAddr = invoice?.address?.to || "—";
       const trailerNos = invoice?.trailer?.regNo || "—";
-
       // const trailerNos =
       //   (invoice.Rows || [])
       //     .map((r) => r.trailerNo)
@@ -423,7 +427,6 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
       <td class="center">${formatDate(invoice.date)}</td>
       <td>${fromAddr}</td>
       <td>${toAddr}</td>
-      
       <td class="num">${formatIndianCurrency(invoiceAmount)}</td>
     </tr>`;
     })
@@ -554,6 +557,7 @@ export async function generateInvoice(idOrIds, outputPath, meta = {}) {
 
   if (!isBulk) {
     // Single invoice — original behaviour unchanged
+    console.log("Generating single invoice PDF for ID:", ids[0]);
     bodyHtml = buildInvoiceHtml(plainList[0], plainList[0].Rows, meta);
   } else {
     // Page 1 — consolidated (1 row, trailer count, rate × count, no LR/Doc)
@@ -575,9 +579,9 @@ export async function generateInvoice(idOrIds, outputPath, meta = {}) {
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
   });
 
-  console.log(
-    `PDF generation — ${isBulk ? `bulk consolidated (${ids.length} invoices)` : "single invoice"}`,
-  );
+  // console.log(
+  //   `PDF generation — ${isBulk ? `bulk consolidated (${ids.length} invoices)` : "single invoice"}`,
+  // );
 
   try {
     const page = await browser.newPage();
@@ -591,11 +595,11 @@ export async function generateInvoice(idOrIds, outputPath, meta = {}) {
 
     if (outputPath) {
       await page.pdf({ ...pdfOptions, path: outputPath });
-      console.log("PDF saved to:", outputPath);
+      // console.log("PDF saved to:", outputPath);
       return outputPath;
     } else {
       const buffer = await page.pdf(pdfOptions);
-      console.log(`PDF buffer generated for invoice(s): ${ids.join(", ")}`);
+      // console.log(`PDF buffer generated for invoice(s): ${ids.join(", ")}`);
       return buffer;
     }
   } finally {

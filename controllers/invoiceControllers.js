@@ -139,11 +139,11 @@ export const createInvoice = async (req, res) => {
       let rowInput = invoiceRows.map(({ id, ...data }) => {
         return { ...data, invoiceId: invoice.id };
       });
-      console.log("invoice.id:", invoice.id, typeof invoice.id);
-      console.log("rowInput:", JSON.stringify(rowInput));
+      // console.log("invoice.id:", invoice.id, typeof invoice.id);
+      // console.log("rowInput:", JSON.stringify(rowInput));
       // const date = new Date(invoiceHeaders.date);
       // console.log(date, "date");
-      console.log(rowInput);
+      // console.log(rowInput);
       // const invoiceHeader = await createNewInvoiceHeader(headerInput, {
       //   transaction: t,
       // });
@@ -151,7 +151,7 @@ export const createInvoice = async (req, res) => {
         transaction: t,
       });
       await t.commit();
-      console.log(invoiceRow.id);
+      // console.log(invoiceRow.id);
     }
     return res.status(201).json(invoice);
   } catch (error) {
@@ -266,14 +266,14 @@ export const deleteInvoice = async (req, res) => {
 
 export const generateInvoiceController = async (req, res) => {
   try {
-    console.log("generateInvoice called with id:", req.params.id);
+    // console.log("generateInvoice called with id:", req.params.id);
     const { id } = req.params;
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ message: "Invalid invoice ID" });
     }
-    console.log(req.body, "req.body");
+    // console.log(req.body, "req.body");
     const response = await createBill([parseInt(id)], req.body.createdBy);
-    console.log("Bill created with ID:", response.id);
+    // console.log("Bill created with ID:", response.id);
     // const pdfDir = path.join(__dirname, "pdf");
     // if (!fs.existsSync(pdfDir)) {
     //   fs.mkdirSync(pdfDir, { recursive: true });
@@ -308,10 +308,10 @@ export const generateInvoiceController = async (req, res) => {
 
 export const generateInvoiceList = async (req, res) => {
   try {
-    console.log("generateInvoiceList called with invoiceIds:", req.body);
+    // console.log("generateInvoiceList called with invoiceIds:", req.body);
     const { invoiceIds } = req.body;
     const response = await createBill(invoiceIds, req.body.createdBy);
-    console.log("Bill created with ID:", response.id);
+    // console.log("Bill created with ID:", response.id);
     // if (
     //   !Array.isArray(invoiceIds) ||
     //   invoiceIds.some((id) => isNaN(parseInt(id)))
