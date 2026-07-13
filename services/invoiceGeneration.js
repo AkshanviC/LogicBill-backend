@@ -477,9 +477,9 @@ function wrapInDocument(bodyContent, title = "Invoice") {
 <title>${title}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; padding: 20px; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; padding: 20px; margin-top: 150px; }
 .invoice { max-width: 860px; margin: auto; border: 1px solid #999; padding: 0; }
-.invoice + .invoice { margin-top: 0; page-break-before: always; }
+.invoice + .invoice { page-break-before: always; }
 .invoice-meta { display: flex; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid #ccc; }
 .to-block { flex: 1; }
 .to-block .label { font-weight: bold; font-size: 11px; margin-bottom: 4px; }
@@ -498,7 +498,7 @@ body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background:
 .items-table td.center { text-align: center; }
 .total-row td { font-weight: bold; background: #f9f9f9; }
 .signature { display: flex; justify-content: flex-end; padding: 20px 16px 10px; font-size: 11px; text-align: center; }
-.summary-sheet { border: 1px solid #999; }
+.summary-sheet { border: 1px solid #999;  margin-top: 200px; }
 .summary-header { padding: 16px; border-bottom: 1px solid #ccc; text-align: center; }
 .company-name { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
 .summary-title { font-size: 14px; font-weight: bold; margin-top: 6px; }
