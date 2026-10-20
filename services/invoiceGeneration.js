@@ -504,6 +504,8 @@ body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background:
 .summary-title { font-size: 14px; font-weight: bold; margin-top: 6px; }
 .summary-subtitle { font-size: 11px; color: #555; margin-top: 4px; }
 .summary-table th { white-space: nowrap; }
+.summary-table { table-layout: fixed; width: 100%; }
+.summary-table td, .summary-table th { word-wrap: break-word; overflow-wrap: break-word; }
 </style>
 </head>
 <body>
