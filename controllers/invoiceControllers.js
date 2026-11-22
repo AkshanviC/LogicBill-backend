@@ -8,7 +8,10 @@ import {
   createNewInvoiceRows,
   generateInvoicePDF,
 } from "../services/invoiceServices.js";
-import { generateInvoice } from "../services/invoiceGeneration.js";
+import {
+  generateInvoice,
+  generatePrabhaInvoicePDF,
+} from "../services/invoiceGeneration.js";
 import sequelize from "../utils/db.js";
 import { createBill } from "../services/billsServices.js";
 // import path from "path";
@@ -151,7 +154,7 @@ export const createInvoice = async (req, res) => {
         transaction: t,
       });
       await t.commit();
-      // console.log(invoiceRow.id);
+      console.log(invoiceRow.id, rowInput);
     }
     return res.status(201).json(invoice);
   } catch (error) {
@@ -268,6 +271,7 @@ export const generateInvoiceController = async (req, res) => {
   try {
     // console.log("generateInvoice called with id:", req.params.id);
     const { id } = req.params;
+    const { clientId } = req.body;
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ message: "Invalid invoice ID" });
     }
@@ -292,7 +296,13 @@ export const generateInvoiceController = async (req, res) => {
     // res.contentType("application/pdf");
     // res.sendFile(filePath);
     // No outputPath passed — returns a Buffer
-    const pdfBuffer = await generateInvoicePDF(parseInt(id));
+    let pdfBuffer;
+    if (clientId === 6 || clientId === 7) {
+      console.log(id, "id");
+      pdfBuffer = await generatePrabhaInvoicePDF(parseInt(id));
+    } else {
+      pdfBuffer = await generateInvoicePDF(parseInt(id));
+    }
 
     if (!pdfBuffer) {
       return res.status(404).json({ message: "Invoice not found" });

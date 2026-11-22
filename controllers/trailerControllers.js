@@ -7,6 +7,26 @@ import {
 } from "../services/trailerService.js";
 
 /**
+ * Validate and normalise transportFirmIds from the request body.
+ * Returns { ids } on success (unique positive integers) or { error } on failure.
+ */
+const parseTransportFirmIds = (raw) => {
+  if (!Array.isArray(raw)) {
+    return { error: "transportFirmIds must be an array of transport firm IDs" };
+  }
+
+  const ids = raw.map((value) => Number(value));
+  if (ids.some((id) => !Number.isInteger(id) || id < 1)) {
+    return { error: "transportFirmIds must contain only positive integers" };
+  }
+
+  return { ids: [...new Set(ids)] };
+};
+
+const isForeignKeyError = (error) =>
+  error?.name === "SequelizeForeignKeyConstraintError";
+
+/**
  * GET /trailers
  * Fetch all trailers with optional pagination
  */
@@ -62,10 +82,11 @@ export const getTrailerById = async (req, res) => {
 /**
  * POST /trailers
  * Create a new trailer
+ * Body: { regNo: string, transportFirmIds?: number[] }
  */
 export const createTrailer = async (req, res) => {
   try {
-    const { regNo } = req.body;
+    const { regNo, transportFirmIds } = req.body;
 
     if (!regNo || typeof regNo !== "string" || regNo.trim() === "") {
       return res
@@ -73,11 +94,26 @@ export const createTrailer = async (req, res) => {
         .json({ message: "regNo is required and must be a non-empty string" });
     }
 
+    let firmIds = [];
+    if (transportFirmIds !== undefined) {
+      const parsed = parseTransportFirmIds(transportFirmIds);
+      if (parsed.error) {
+        return res.status(400).json({ message: parsed.error });
+      }
+      firmIds = parsed.ids;
+    }
+
     const trailer = await createNewTrailer({
       regNo: regNo.trim().toUpperCase(),
+      transportFirmIds: firmIds,
     });
     return res.status(201).json(trailer);
   } catch (error) {
+    if (isForeignKeyError(error)) {
+      return res
+        .status(400)
+        .json({ message: "One or more transport firms do not exist" });
+    }
     console.error("createTrailer error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
@@ -86,6 +122,8 @@ export const createTrailer = async (req, res) => {
 /**
  * PUT /trailers/:id
  * Update an existing trailer by ID
+ * Body: { regNo?: string, transportFirmIds?: number[] }
+ * If transportFirmIds is sent, it replaces the trailer's current firm list.
  */
 export const updateTrailer = async (req, res) => {
   try {
@@ -95,7 +133,7 @@ export const updateTrailer = async (req, res) => {
       return res.status(400).json({ message: "Invalid trailer ID" });
     }
 
-    const { regNo } = req.body;
+    const { regNo, transportFirmIds } = req.body;
 
     if (
       regNo !== undefined &&
@@ -106,8 +144,18 @@ export const updateTrailer = async (req, res) => {
         .json({ message: "regNo must be a non-empty string" });
     }
 
+    let firmIds;
+    if (transportFirmIds !== undefined) {
+      const parsed = parseTransportFirmIds(transportFirmIds);
+      if (parsed.error) {
+        return res.status(400).json({ message: parsed.error });
+      }
+      firmIds = parsed.ids;
+    }
+
     const updatedTrailer = await updateTrailerById(parseInt(id), {
       ...(regNo !== undefined && { regNo: regNo.trim().toUpperCase() }),
+      ...(firmIds !== undefined && { transportFirmIds: firmIds }),
     });
 
     if (!updatedTrailer) {
@@ -116,6 +164,11 @@ export const updateTrailer = async (req, res) => {
 
     return res.status(200).json(updatedTrailer);
   } catch (error) {
+    if (isForeignKeyError(error)) {
+      return res
+        .status(400)
+        .json({ message: "One or more transport firms do not exist" });
+    }
     console.error("updateTrailer error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }

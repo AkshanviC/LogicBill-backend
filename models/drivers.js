@@ -16,12 +16,20 @@ const Drivers = sequelize.define(
       type: DataTypes.TEXT,
       field: "phoneNumber",
     },
+    transportFirmId: {
+      type: DataTypes.STRING,
+      field: "transportFirmId",
+      references: {
+        model: "transportfirm",
+        key: "id",
+      },
+    },
   },
   {
     tableName: "drivers",
     timestamps: true, // This enables createdAt and updatedAt automatically
     underscored: true,
-  }
+  },
 );
 
 export default Drivers;

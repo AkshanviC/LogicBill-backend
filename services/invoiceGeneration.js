@@ -419,7 +419,7 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
           .join(", ") || "—";
 
       return `<tr>
-      <td class="center">${idx + 1}</td>
+      <td class="center serialNo">${idx + 1}</td>
       <td class="center">${trailerNos}</td>
       <td class="center">${lrNos}</td>
       <td class="center">${docNos}</td>
@@ -442,7 +442,7 @@ function buildSummarySheetHtml(invoiceList, meta = {}) {
     <table class="items-table summary-table">
       <thead>
         <tr>
-          <th>S.No</th>
+          <th class="serialNo">S.No</th>
           <th>Trailer No</th>
           <th>LR No</th>
           <th>Doc No</th>
@@ -602,6 +602,293 @@ export async function generateInvoice(idOrIds, outputPath, meta = {}) {
     } else {
       const buffer = await page.pdf(pdfOptions);
       // console.log(`PDF buffer generated for invoice(s): ${ids.join(", ")}`);
+      return buffer;
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// buildPrabhaInvoiceHtml — Tax Invoice for PRABHA UNIT-9 template
+//
+// Header (company block) is omitted — printed on letterpad.
+//
+// Hardcoded constants:
+//   - Reverse Charge: YES
+//   - State / Place of Supply: Tamil Nadu 33 / CHENNAI
+//   - Vehicle No & Type: "As per the details attached"
+//   - Service to Party: ASHOK LEYLAND, ENNORE - CHENNAI, 33AAACA4651L1ZT
+//   - Bank: SHREEJI CARRIERS | A/C 01662000015285 | IFSC HDFC0001299
+//
+// @param {object} invoice
+//   invoice.invoiceNo          {string}
+//   invoice.invoiceDate        {string|Date}
+//   invoice.poNumberAndDate    {string}   optional, defaults to "—"
+//   invoice.billTo             {object}
+//     .name                    {string}
+//     .address                 {string}
+//     .gstin                   {string}
+//     .state                   {string}   e.g. "TAMIL NADU"
+//     .stateCode               {string}   e.g. "33"
+//   invoice.row                {object}   single items row
+//     .productDescription      {string}
+//     .hsn                     {string}   optional
+//     .uom                     {string}   optional
+//     .noOfLoads               {number}
+//     .rate                    {number}
+//     .discount                {number}   optional, defaults to 0
+//     .cgstRate                {number}   percentage, e.g. 9 for 9%
+//     .sgstRate                {number}   percentage, e.g. 9 for 9%
+// ---------------------------------------------------------------------------
+function buildPrabhaInvoiceHtml(invoice) {
+  console.log(invoice.Rows[0], "rows");
+  const row = invoice.Rows[0];
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const STATE = "Tamil Nadu";
+  const STATE_CODE = "33";
+  const PLACE_OF_SUPPLY = "CHENNAI";
+  const SERVICE_TO = {
+    name: "ASHOK LEYLAND",
+    address: "ENNORE - CHENNAI",
+    gstin: "33AAACA4651L1ZT",
+    state: "TAMIL NADU",
+    code: "33",
+  };
+  const BANK = {
+    name: "SHREEJI CARRIERS",
+    ac: "01662000015285",
+    ifsc: "HDFC0001299",
+  };
+
+  // ── Inputs ─────────────────────────────────────────────────────────────────
+  const invoiceNo = row.invoiceNo || "—";
+  const invoiceDate = formatDate(invoice.date);
+  const poNumberAndDate = invoice.pono || "—";
+
+  const billTo = invoice.billTo || {};
+  // const row = invoice.row || {};
+
+  const noOfLoads = Number(row.noOfLoads) || 0;
+  const rate = Number(row.rate) || 0;
+  const discount = Number(row.discount) || 0;
+  const cgstRate = Number(row.cgstRate) || 0;
+  const sgstRate = Number(row.sgstRate) || 0;
+
+  // ── Calculations ───────────────────────────────────────────────────────────
+  const amount = noOfLoads * rate;
+  const taxableValue = amount - discount;
+  const cgstAmount = (taxableValue * cgstRate) / 100;
+  const sgstAmount = (taxableValue * sgstRate) / 100;
+  const totalTax = cgstAmount + sgstAmount;
+  const total = taxableValue + totalTax;
+
+  const fmt = (n) => formatIndianCurrency(n);
+
+  // ── HTML ───────────────────────────────────────────────────────────────────
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tax Invoice - ${invoiceNo}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 12px; color: #222; background: #fff; padding: 0px; }
+.invoice { max-width: 920px; margin: 0px; border: 1px solid #999; padding: 0; }
+.items-table { width: 100%; border-collapse: collapse; }
+.items-table th, .items-table td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: middle; }
+.items-table th { background: #f0f0f0; font-weight: bold; font-size: 9px; text-align: center; }
+.items-table td.num { text-align: right; font-size: 8px }
+.items-table td.center { text-align: center; font-size: 8px }
+.items-table td.description { font-size: 8px }
+.total-row td { font-weight: bold; background: #f9f9f9; }
+.meta-grid { display: flex; padding: 10px 8px; border-bottom: 1px solid #ccc; gap: 20px; }
+.meta-grid > div { flex: 1; font-size: 11px; }
+.party-grid { display: flex; padding: 10px 8px; border-bottom: 1px solid #ccc; gap: 20px; }
+.party-grid > div { flex: 1; font-size: 11px; }
+.party-label { font-weight: bold; margin-bottom: 4px; }
+.bottom-grid { display: flex; padding: 10px 16px; gap: 20px; border-top: 1px solid #ccc; }
+.bottom-grid > div { flex: 1; font-size: 11px; }
+.summary-table { margin-left: auto; border-collapse: collapse; }
+.summary-table td { padding: 2px 6px; }
+.summary-table td:last-child { font-weight: bold; text-align: right; }
+.total-words { padding: 6px 16px; font-size: 11px; border-top: 1px solid #ccc; }
+.signature { display: flex; justify-content: flex-end; padding: 20px 16px 10px; font-size: 11px; text-align: center; }
+.serialNo { max-width: 30px }
+</style>
+</head>
+<body>
+<div class="invoice">
+
+  <!-- Invoice meta + state info -->
+  <div class="meta-grid">
+    <div>
+      <div><strong>Invoice No:</strong> ${invoiceNo}</div>
+      <div><strong>Invoice Date:</strong> ${invoiceDate}</div>
+      <div><strong>Reverse Charge:</strong> YES</div>
+      <div><strong>PO Number &amp; Date:</strong> ${poNumberAndDate}</div>
+    </div>
+    <div>
+      <div><strong>State:</strong> ${STATE} &nbsp; Code: ${STATE_CODE}</div>
+      <div><strong>Place of Supply:</strong> ${PLACE_OF_SUPPLY}</div>
+      <div><strong>Vehicle No:</strong> As per the details attached</div>
+      <div><strong>Type of Vehicle:</strong> As per the details attached</div>
+    </div>
+  </div>
+
+  <!-- Bill to / Service to -->
+  <div class="party-grid">
+    <div>
+      <div class="party-label">Bill to Party</div>
+      <div><strong>Name:</strong> ${billTo.name || "—"}</div>
+      <div><strong>Address:</strong> ${billTo.address || "—"}</div>
+      <div><strong>GSTIN:</strong> ${billTo.gstin || "—"}</div>
+      <div><strong>State:</strong> ${billTo.state || "—"} &nbsp; Code: ${billTo.stateCode || "—"}</div>
+    </div>
+    <div>
+      <div class="party-label">Service to Party</div>
+      <div><strong>Name:</strong> ${SERVICE_TO.name}</div>
+      <div><strong>Address:</strong> ${SERVICE_TO.address}</div>
+      <div><strong>GSTIN:</strong> ${SERVICE_TO.gstin}</div>
+      <div><strong>State:</strong> ${SERVICE_TO.state} &nbsp; Code: ${SERVICE_TO.code}</div>
+    </div>
+  </div>
+
+  <!-- Items table -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th rowspan="2">S.No</th>
+        <th rowspan="2">Product Description</th>
+        <th rowspan="2">HSN</th>
+        <th rowspan="2">UOM</th>
+        <th rowspan="2">No of Loads</th>
+        <th rowspan="2">Rate</th>
+        <th rowspan="2">Amount</th>
+        <th rowspan="2">Discount</th>
+        <th rowspan="2">Taxable Value</th>
+        <th colspan="2">CGST</th>
+        <th colspan="2">SGST</th>
+        <th rowspan="2">Total</th>
+      </tr>
+      <tr><th>Rate</th><th>Amount</th><th>Rate</th><th>Amount</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">1</td>
+        <td class="description">${row.productDescription || "Being the transportation charge"}</td>
+        <td class="center">${row.hsn || ""}</td>
+        <td class="center">${row.uom || ""}</td>
+        <td class="center">${noOfLoads}</td>
+        <td class="num">${fmt(rate)}</td>
+        <td class="num">${fmt(amount)}</td>
+        <td class="center">${discount || 0}</td>
+        <td class="center">${fmt(taxableValue)}</td>
+        <td class="center">${cgstRate ? cgstRate + "%" : 0}</td>
+        <td class="center">${cgstAmount ? fmt(cgstAmount) : 0}</td>
+        <td class="center">${sgstRate ? sgstRate + "%" : 0}</td>
+        <td class="center">${sgstAmount ? fmt(sgstAmount) : 0}</td>
+        <td class="num">${fmt(total)}</td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="4" style="text-align:left">Total</td>
+        <td class="center">${noOfLoads}</td>
+        <td class="num">${fmt(rate)}</td>
+        <td class="num">${fmt(amount)}</td>
+        <td class="center">${discount || 0}</td>
+        <td class="center">${fmt(taxableValue)}</td>
+        <td></td>
+        <td class="center">${cgstAmount ? fmt(cgstAmount) : 0}</td>
+        <td></td>
+        <td class="center">${sgstAmount ? fmt(sgstAmount) : 0}</td>
+        <td class="num">${fmt(total)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Bank details + summary -->
+  <div class="bottom-grid">
+    <div>
+      <div><strong>Bank Details</strong></div>
+      <div>Bank Name: ${BANK.name}</div>
+      <div>Bank A/C: ${BANK.ac}</div>
+      <div>Bank IFSC: ${BANK.ifsc}</div>
+      <div style="margin-top:6px"><strong>Terms &amp; Conditions</strong></div>
+    </div>
+    <div style="text-align:right">
+      <table class="summary-table">
+        <tr><td>Total Amount before Tax:</td><td>${fmt(taxableValue)}</td></tr>
+        <tr><td>Add: CGST:</td><td>${cgstAmount ? fmt(cgstAmount) : 0}</td></tr>
+        <tr><td>Add: SGST:</td><td>${sgstAmount ? fmt(sgstAmount) : 0}</td></tr>
+        <tr><td>Total Tax Amount:</td><td>${totalTax ? fmt(totalTax) : 0}</td></tr>
+        <tr style="font-weight:bold"><td>Total Amount after Tax:</td><td>${fmt(total)}</td></tr>
+        <tr><td colspan="2" style="font-size:10px">GST on Reverse Charge</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Amount in words -->
+  <div class="total-words">
+    <strong>Total Invoice amount in words:</strong> ${numberToWords(total)}
+  </div>
+
+  <!-- Signature -->
+  <div class="signature">
+    <div>For SHREEJI CARRIERS<br><br><br>Authorised Signatory</div>
+  </div>
+
+</div>
+</body>
+</html>`;
+}
+
+// ---------------------------------------------------------------------------
+// generatePrabhaInvoicePDF
+//
+// Renders a single PRABHA UNIT-9 tax invoice to PDF.
+//
+// @param {object} invoice     — see buildPrabhaInvoiceHtml for shape
+// @param {string} [outputPath] — omit to get a Buffer back
+// @returns {Promise<string|Buffer>}
+// ---------------------------------------------------------------------------
+export async function generatePrabhaInvoicePDF(id, outputPath) {
+  const invoiceData = await Invoices.findByPk(id, {
+    include: [
+      { model: InvoiceRows, as: "Rows" },
+      { model: Clients, as: "client" },
+      { model: Drivers, as: "driver" },
+      { model: Trailers, as: "trailer" },
+      { model: Address, as: "address" },
+      { model: Bills, as: "bills" },
+    ],
+  });
+  const invoice = invoiceData?.dataValues;
+  const html = buildPrabhaInvoiceHtml(invoice);
+
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  console.log("PDF generation — Prabha tax invoice");
+
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfOptions = {
+      format: "A4",
+      printBackground: true,
+      // Extra top margin — space for the letterpad header
+      margin: { top: "40mm", bottom: "10mm", left: "10mm", right: "10mm" },
+    };
+
+    if (outputPath) {
+      await page.pdf({ ...pdfOptions, path: outputPath });
+      console.log("PDF saved to:", outputPath);
+      return outputPath;
+    } else {
+      const buffer = await page.pdf(pdfOptions);
+      console.log("PDF buffer generated for invoice:", invoice.invoiceNo);
       return buffer;
     }
   } finally {

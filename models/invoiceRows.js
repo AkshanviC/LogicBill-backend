@@ -58,6 +58,27 @@ const InvoiceRows = sequelize.define("invoicerows", {
   fromToId: {
     type: DataTypes.INTEGER,
   },
+  hsn: {
+    type: DataTypes.STRING,
+  },
+  uom: {
+    type: DataTypes.STRING,
+  },
+  noOfLoads: {
+    type: DataTypes.INTEGER,
+  },
+  discount: {
+    type: DataTypes.INTEGER,
+  },
+  cgstRate: {
+    type: DataTypes.FLOAT,
+  },
+  sgstRate: {
+    type: DataTypes.FLOAT,
+  },
+  productDescription: {
+    type: DataTypes.STRING,
+  },
 });
 
 export default InvoiceRows;

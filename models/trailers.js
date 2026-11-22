@@ -13,12 +13,20 @@ const Trailers = sequelize.define(
       type: DataTypes.TEXT,
       field: "regNo",
     },
+    transportFirmId: {
+      type: DataTypes.STRING,
+      field: "transportFirmId",
+      references: {
+        model: "transportfirm",
+        key: "id",
+      },
+    },
   },
   {
     tableName: "trailers",
     timestamps: true, // This enables createdAt and updatedAt automatically
     underscored: true,
-  }
+  },
 );
 
 export default Trailers;

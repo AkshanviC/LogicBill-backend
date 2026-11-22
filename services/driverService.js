@@ -1,21 +1,77 @@
+import { Op } from "sequelize";
+import sequelize from "../utils/db.js";
 import Drivers from "../models/drivers.js";
+import DriverTransportFirms from "../models/driverTransportFirm.js";
+
+const firmInclude = {
+  model: DriverTransportFirms,
+  as: "driverFirms",
+  attributes: ["transportFirmId"],
+};
 
 /**
- * Fetch all drivers with pagination
- * @param {Object} options - { page, limit }
+ * Shape a driver row for the API:
+ * { id, name, phoneNumber, createdAt, updatedAt, transportFirmIds: [1, 2] }
+ */
+const toDriverResponse = (driver) => {
+  const { driverFirms = [], ...rest } = driver.toJSON();
+  return {
+    ...rest,
+    transportFirmIds: driverFirms.map((link) => link.transportFirmId),
+  };
+};
+
+/**
+ * Fetch drivers with pagination, optional name/phone search and transport firm filter
+ * @param {Object} options - { page, limit, search, transportFirmId }
  * @returns {Object} - { data, total, page, limit, totalPages }
  */
-export const fetchAllDrivers = async ({ page = 1, limit = 10 }) => {
+export const fetchAllDrivers = async ({
+  page = 1,
+  limit = 10,
+  search = "",
+  transportFirmId,
+}) => {
   const offset = (page - 1) * limit;
+  const where = {};
+
+  if (search) {
+    // escape LIKE wildcards so they are matched literally
+    const escaped = search.replace(/[\\%_]/g, "\\$&");
+    const pattern = `%${escaped}%`;
+    where[Op.or] = [
+      { name: { [Op.like]: pattern } },
+      { phoneNumber: { [Op.like]: pattern } },
+    ];
+  }
+
+  if (transportFirmId) {
+    // Look up the drivers linked to this firm first, so each returned
+    // driver still carries ALL of their firm IDs (not just the filtered one)
+    const links = await DriverTransportFirms.findAll({
+      where: { transportFirmId },
+      attributes: ["driverId"],
+      raw: true,
+    });
+
+    if (links.length === 0) {
+      return { data: [], total: 0, page, limit, totalPages: 0 };
+    }
+
+    where.id = { [Op.in]: links.map((link) => link.driverId) };
+  }
 
   const { count, rows } = await Drivers.findAndCountAll({
+    where,
+    include: [firmInclude],
+    distinct: true, // count drivers, not joined rows
     limit,
     offset,
     order: [["createdAt", "DESC"]],
   });
 
   return {
-    data: rows,
+    data: rows.map(toDriverResponse),
     total: count,
     page,
     limit,
@@ -29,38 +85,83 @@ export const fetchAllDrivers = async ({ page = 1, limit = 10 }) => {
  * @returns {Object|null}
  */
 export const fetchDriverById = async (id) => {
-  const driver = await Drivers.findByPk(id);
-  return driver;
+  const driver = await Drivers.findByPk(id, { include: [firmInclude] });
+  return driver ? toDriverResponse(driver) : null;
 };
 
 /**
- * Create a new driver record
- * @param {Object} data - { name, phoneNumber }
- * @returns {Object} - Created driver
+ * Create a new driver and link them to their transport firms
+ * @param {Object} data - { name, phoneNumber, transportFirmIds }
+ * @returns {Object} - Created driver with transportFirmIds
  */
-export const createNewDriver = async (data) => {
-  const driver = await Drivers.create(data);
-  return driver;
+export const createNewDriver = async ({
+  name,
+  phoneNumber,
+  transportFirmIds = [],
+}) => {
+  const driverId = await sequelize.transaction(async (t) => {
+    const driver = await Drivers.create(
+      { name, phoneNumber },
+      { transaction: t },
+    );
+
+    if (transportFirmIds.length > 0) {
+      await DriverTransportFirms.bulkCreate(
+        transportFirmIds.map((transportFirmId) => ({
+          driverId: driver.id,
+          transportFirmId,
+        })),
+        { transaction: t },
+      );
+    }
+
+    return driver.id;
+  });
+
+  return fetchDriverById(driverId);
 };
 
 /**
  * Update a driver by ID
- * Only updates fields that are explicitly provided
+ * Only updates fields that are explicitly provided.
+ * If transportFirmIds is provided, it replaces the driver's firm list.
  * @param {number} id
- * @param {Object} data - Partial driver fields
+ * @param {Object} data - { name?, phoneNumber?, transportFirmIds? }
  * @returns {Object|null} - Updated driver or null if not found
  */
-export const updateDriverById = async (id, data) => {
+export const updateDriverById = async (id, { transportFirmIds, ...fields }) => {
   const driver = await Drivers.findByPk(id);
 
   if (!driver) return null;
 
-  await driver.update(data);
-  return driver;
+  await sequelize.transaction(async (t) => {
+    if (Object.keys(fields).length > 0) {
+      await driver.update(fields, { transaction: t });
+    }
+
+    if (transportFirmIds !== undefined) {
+      await DriverTransportFirms.destroy({
+        where: { driverId: id },
+        transaction: t,
+      });
+
+      if (transportFirmIds.length > 0) {
+        await DriverTransportFirms.bulkCreate(
+          transportFirmIds.map((transportFirmId) => ({
+            driverId: id,
+            transportFirmId,
+          })),
+          { transaction: t },
+        );
+      }
+    }
+  });
+
+  return fetchDriverById(id);
 };
 
 /**
- * Delete a driver by ID
+ * Delete a driver by ID (and their firm links)
  * @param {number} id
  * @returns {boolean} - true if deleted, false if not found
  */
@@ -69,6 +170,13 @@ export const deleteDriverById = async (id) => {
 
   if (!driver) return false;
 
-  await driver.destroy();
+  await sequelize.transaction(async (t) => {
+    await DriverTransportFirms.destroy({
+      where: { driverId: id },
+      transaction: t,
+    });
+    await driver.destroy({ transaction: t });
+  });
+
   return true;
 };

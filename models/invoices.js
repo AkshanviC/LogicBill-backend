@@ -105,6 +105,9 @@ const Invoices = sequelize.define("invoices", {
     },
     allowNull: true, // Nullable because an invoice exists before it is billed
   },
+  others: {
+    type: DataTypes.STRING,
+  },
 });
 
 export default Invoices;
